@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   ArrowLeft, CheckCircle, XCircle, AlertTriangle, Info,
-  FileText, Code, Link as LinkIcon, Zap, Globe, Users, TrendingUp
+  FileText, Code, Link as LinkIcon, Zap, Globe, Users, TrendingUp,
+  Download, Share2, Printer, RefreshCw, BarChart3, AlertCircle
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 const API = `${BACKEND_URL}/api`;
 
 const ReportPage = () => {
@@ -15,6 +16,10 @@ const ReportPage = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('basic');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(true);
 
   useEffect(() => {
     fetchReport();
@@ -29,6 +34,54 @@ const ReportPage = () => {
       console.error('Failed to load report:', error);
       setLoading(false);
     }
+  };
+
+  // Export report as PDF
+  const handleExportPDF = async () => {
+    setExportLoading(true);
+    try {
+      const response = await axios.get(`${API}/seo/reports/${reportId}/export/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `SEO-Report-${reportId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentElement.removeChild(link);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Share report
+  const handleShareReport = () => {
+    const shareUrl = `${window.location.origin}/reports/${reportId}`;
+    if (navigator.share) {
+      navigator.share({
+        title: 'SEO Audit Report',
+        text: `Check out my SEO audit report for ${report?.url}`,
+        url: shareUrl
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert('Report link copied to clipboard!');
+    }
+  };
+
+  // Refresh report data
+  const handleRefreshReport = async () => {
+    setRefreshing(true);
+    await fetchReport();
+    setRefreshing(false);
+  };
+
+  // Print report
+  const handlePrintReport = () => {
+    window.print();
   };
 
   const ScoreCircle = ({ score, label }) => {
@@ -113,13 +166,49 @@ const ReportPage = () => {
       {/* Sticky Header */}
       <div className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Home</span>
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Home</span>
+            </button>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleRefreshReport}
+                disabled={refreshing}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh Report"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={handlePrintReport}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Print Report"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleShareReport}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Share Report"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleExportPDF}
+                disabled={exportLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>{exportLoading ? 'Exporting...' : 'Export PDF'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
