@@ -5,7 +5,7 @@
 ### 1. **Export to PDF**
 - Download SEO reports as PDF documents
 - Endpoint: `/api/seo/reports/:id/export/pdf`
-33
+
 ### 2. **Share Report**
 - Share reports via link or clipboard
 - Native sharing for supported devices
